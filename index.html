@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HTTP/2 Demo</title>
+    <style>
+      *,
+      *::after,
+      *::before {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+      }
+
+      :root {
+        --primary-background: #cbf8fb;
+        --light-background: white;
+
+        --shadow-color: 184deg 34% 56%;
+        --shadow-elevation-low: 0.3px 0.5px 0.7px
+            hsl(var(--shadow-color) / 0.34),
+          0.4px 0.8px 1px -1.2px hsl(var(--shadow-color) / 0.34),
+          1px 2px 2.5px -2.5px hsl(var(--shadow-color) / 0.34);
+      }
+
+      body {
+        background: var(--primary-background);
+        display: grid;
+        place-content: center;
+      }
+
+      #app {
+        width: 500px;
+        aspect-ratio: 1 / 1;
+
+        display: grid;
+        justify-items: center;
+        align-items: center;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 8px;
+      }
+
+      .box {
+        display: grid;
+        overflow: hidden;
+        grid-template-columns: repeat(10, 1fr);
+        aspect-ratio: 1 / 1;
+        border-radius: 3px;
+        background: var(--light-background);
+        box-shadow: var(--shadow-elevation-low);
+      }
+
+      .progress {
+        width: 100%;
+        aspect-ratio: 1/1;
+      }
+    </style>
+    <script></script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script>
+      const PROPS = [
+        { size: 'mini', width: '33%' },
+        { size: 'medium', width: '66%' },
+        { size: 'mega', width: '100%' },
+      ];
+
+      function getRandomProps() {
+        const randomizedKey = Math.floor(Math.random() * 3);
+        return PROPS[randomizedKey];
+      }
+
+      async function loadContentProgressively(response, stepCallback) {
+        const reader = response.body.getReader();
+        const contentTotal = +response.headers.get('Content-Length');
+        let done = false;
+        let contentLoaded = 0;
+        while (!done) {
+          const result = await reader.read();
+          const stepLoaded = result?.value?.length ?? 0;
+          contentLoaded += stepLoaded;
+          stepCallback({ loaded: contentLoaded, total: contentTotal });
+          done = result.done;
+        }
+      }
+
+      const app = document.querySelector('#app');
+
+      for (const idx in Array.from({ length: 5 * 5 })) {
+        const randomized = getRandomProps();
+
+        const box = document.createElement('div');
+        box.classList.add('box');
+        box.style.width = randomized.width;
+        const progress = Array.from({ length: 100 }, () => {
+          const elm = document.createElement('div');
+          elm.classList.add('progress');
+          return elm;
+        });
+        box.append(...progress);
+        app.append(box);
+
+        const renderLoading = ({ loaded, total }) => {
+          if (loaded > 0) {
+            // Visually display that a request was kicked off
+            box.style.outline = '1px solid deeppink';
+          }
+          if (loaded === total) {
+            // Then remove it after loading is done
+            box.style.outline = '0';
+          }
+          const percentage = Math.floor(100 * (loaded / total));
+          for (const idx in Array.from({ length: percentage })) {
+            const progressElement = box.childNodes.item(idx);
+            progressElement.style.backgroundColor = '#dedede';
+          }
+        };
+
+        fetch(`style-${randomized.size}.css`)
+          .then((response) => loadContentProgressively(response, renderLoading))
+          .then(() => {
+            // Cleanup visual after done for loading content
+            box.style.backgroundColor = 'lime';
+            box.textContent = '';
+          });
+      }
+    </script>
+  </body>
+</html>

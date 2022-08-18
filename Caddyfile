@@ -1,0 +1,13 @@
+{
+	# By default, any HTTP request would be redirected to HTTPS automatically
+	# I do need both protocal to be served separately, then turn it off
+	auto_https disable_redirects
+}
+
+http://dev.localhost {
+	file_server
+}
+
+https://dev.localhost {
+	file_server
+}
